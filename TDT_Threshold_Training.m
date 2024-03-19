@@ -1,5 +1,5 @@
 function TDT_Threshold_Training
-
+addpath ./WeibullAnalysis/
 %% TDT Threshold training.
 
 % This is the threshold training session for the TDT experiment. This
@@ -21,27 +21,27 @@ Dates = ['18/09/2016';'07/07/2016';'03/04/2016'];
                                               
 % Default values for the GUI screen:
 
-choice.SubjectName = ''; % Subject name or number.
+choice.SubjectName = 'tst'; % Subject name or number.
 choice.Session = 1; % The session number.
 
 % Parameters not used in the function, only saved for analysis:
 choice.Day = 1; % The day number.
-choice.Group = ''; % The group number.
-choice.Sleep = ''; % Hours of sleep.
-choice.Age = ''; % The age of the subject.
-choice.Gender = 'Female'; % Gender of the subject.
-choice.GenderNumber = 1;
+choice.Group = '1'; % The group number.
+choice.Sleep = '1'; % Hours of sleep.
+choice.Age = '32'; % The age of the subject.
+choice.Gender = 'Male'; % Gender of the subject.
+choice.GenderNumber = 2;
 
 choice.nTrials = 1; % Number of trials for each SOA.
 choice.nBlocks = 1; % Number of blocks in the session.
-choice.TargetTime = 10; % Target display time in milliseconds. 
+choice.TargetTime = 17; % Target display time in milliseconds. 
 
 % Keyboard keys for response:
-choice.TRKeys = ''; % 'T' for fixation and row for alignment.
-choice.LCKeys = ''; % 'L' for fixation and column for alignment.
+choice.TRKeys = 't'; % 'T' for fixation and row for alignment.
+choice.LCKeys = 'l'; % 'L' for fixation and column for alignment.
 
-choice.Device = 'Mouse'; % Responce device, could be either 'Mouse' or 'Keyboard'.
-choice.DeviceNumber = 1;
+choice.Device = 'Keyboard'; % Responce device, could be either 'Mouse' or 'Keyboard'.
+choice.DeviceNumber = 2;
 choice.Screen = 'TMS Room'; % Screen used, could be either 'TMS Room', 'TDT Room' or 'Old HP'.
 choice.ScreenNumber = 1;
 choice.ReTraining = 0;
@@ -51,9 +51,9 @@ choice.HorizontalLines = 19;
 
 choice.RelativeSize = 0.93; % Relative size of the screen on which the stimuli are presented.
 % Screen width and hight in pixels and refresh rate in Hz:
-choice.ScreenWidth = 1152;
-choice.ScreenHeight = 864;
-choice.RefreshRate = 100;
+choice.ScreenWidth = 1920;
+choice.ScreenHeight = 1080;
+choice.RefreshRate = 60;
 
 choice.Orientation = '-'; % The orientation of the backround lines in the target stimuli, could be either '-' or '|'.
 choice.OrientationNumber = 1;
@@ -340,7 +340,7 @@ Times(Session).FinalFixation = 3; % Time of post-experiment (rest) cross-fixatio
 Times(Session).FixationBlockBlank = 1; % Time of blank screen within each cross-fixation block in seconds (at the end of the block). Default is 1.
 Times(Session).Blank = 0.300; % Time of blank screen within each trial in seconds. Default is 0.300.
 Times(Session).Mask = 0.100; % Time of mask screen within each trial in seconds. Default is 0.100.
-Times(Session).SOAs = repmat([ 340 300 260 240 220 200 180 160 140 120 100 80 60 40 ],1,choice.nTrials); % SOA (Stimulus-to-mask Onset Asynchrony) times which will be used in each block.
+Times(Session).SOAs = repmat([ 600 330   ],1,choice.nTrials); % SOA (Stimulus-to-mask Onset Asynchrony) times which will be used in each block.
 
 %% Set up the experiment. DO NOT change this section!
 
@@ -424,6 +424,7 @@ catch
     end
     oldResolution = Screen('Resolution', whichScreen);
 end
+Screen('Preference', 'SkipSyncTests', 1);
 Resolution = Screen('Resolution', whichScreen);
 [window1, ~] = Screen('Openwindow',whichScreen,Parameters(Session).BackgroundColor,[],[],2); % Opening the onscreen window.
 Parameters(Session).W = Resolution.width; % screen width
@@ -526,9 +527,9 @@ while b < choice.nBlocks+1
     Output(Session).SOAs(b,:) = zeros(1,length(Times(Session).SOAs));
     % Prepare the Output matrices with default values which will change
     % according to the subject's responses:
-    Output(Session).Responses(:,:,b) = char(84*ones(2,length(Times(Session).SOAs)));
-    Output(Session).Responses(2,:,b) = '-';
-    Output(Session).ResponseTimes(:,:,b) = zeros(2,length(Times(Session).SOAs));
+    Output(Session).Responses(:,:,b) = char(45*ones(1,length(Times(Session).SOAs)));
+    % Output(Session).Responses(2,:,b) = '-';
+    Output(Session).ResponseTimes(:,:,b) = zeros(1,length(Times(Session).SOAs));
     Output(Session).SOASuccess(:,:,b) = zeros(length(Times(Session).SOAs)/choice.nTrials,2);
         
     % Display the cross fixation:
@@ -653,22 +654,23 @@ while b < choice.nBlocks+1
             % keys for response, and recording the timings of the presses:
             i = 1;
             KbQueueFlush([],2);
-            while i<3
+            while i<2
                 [event, ~] = PsychHID('KbQueueGetEvent');
                 if ~isempty(event) && ~event.Pressed && ismember(event.Keycode,[Parameters(Session).L_Ver,Parameters(Session).T_Hor])
                     if ismember(event.Keycode,Parameters(Session).L_Ver)
-                        if i==1
-                            Output(Session).Responses(i,t,b) ='L';
-                        else
-                            Output(Session).Responses(i,t,b) ='|';
-                        end
+                        % if i==1
+                        %     Output(Session).Responses(i,t,b) ='L';
+                        % else
+                        %     Output(Session).Responses(i,t,b) ='|';
+                        % end
+                        Output(Session).Responses(i,t,b) = '|'
                     end
-                    if i==1 && (Output(Session).Responses(1,t,b)~=Output(Session).Displays(1,t,b))
-                        % Playing the error sound for a wrong fixation response:
-                        PsychPortAudio('Stop', pahandle);
-                        PsychPortAudio('UseSchedule', pahandle, 3);
-                        PsychPortAudio('Start', pahandle);
-                    end
+                    % if i==1 && (Output(Session).Responses(1,t,b)~=Output(Session).Displays(1,t,b))
+                    %     % Playing the error sound for a wrong fixation response:
+                    %     PsychPortAudio('Stop', pahandle);
+                    %     PsychPortAudio('UseSchedule', pahandle, 3);
+                    %     PsychPortAudio('Start', pahandle);
+                    % end
                     Output(Session).ResponseTimes(i,t,b) = event.Time - flipTime;
                     i = i+1;
                 end
@@ -946,7 +948,7 @@ if strcmp(choice,'Yes')
     
 end
     
-
+rmpath ./WeibullAnalysis/
 end
 
 
@@ -1469,5 +1471,5 @@ function choice = choosedialog(choice)
         delete(gcf);
         choice.Load = 1;
     end
-        
+
 end
