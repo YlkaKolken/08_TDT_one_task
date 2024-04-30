@@ -1,49 +1,45 @@
-function TDT_Threshold_Training
-addpath ./WeibullAnalysis/
-%% TDT Threshold training.
+function TDT_Initial_Training
 
-% This is the threshold training session for the TDT experiment. This
-% function should be used both for the pre-training and for each session.
-% In each block the subject performs each SOA a given number of times
-% (nTrials) in a random order. There are 14 SOA times as a default.
-% The required syntax is: "TDT_Threshold_Training;", or through "TDT;".
+%% TDT initial training.
 
-%% Get parameters through GUI.
+% This is the initial training session for the TDT experiment.
+% The subject responds to a given number of trials with a given fixed SOA.
+% The experiment ends when the subject completes a required success
+% percentage of responses or completes the maximum number of block/tries
+% allowed.
+% The required syntax is: "TDT_Initial_Training;", or through "TDT;".
 
-Screens = [{'ViewSonic PF817 Serial Number: QY01400013'};{'ViewSonic PF817 Serial Number: QY01400084'};{'HP P1230 Serial Number: CNV4300070'};{'Iiyama Prolite B2483HS'}];
-Gamma = [2.8252,3.4603,2.2437, 0.7716];
-Brightness = [33,24,30, 30];
-Dates = ['18/09/2016';'07/07/2016';'03/04/2016';'25/09/2023'];
-% Gamma correction value for the colors, and brightness of the screen.
+%% Get Parameters through GUI.
+
+% Values for the Gamma correction and brightness of the screen.
 % Values are according to measurements on the dates in the Dates vector.
 % The CRT screens are in the following order:
 % [TMS room, TDT room,  Old CRT screen]
-                                              
+Screens = [{'ViewSonic PF817 Serial Number: QY01400013'};{'ViewSonic PF817 Serial Number: QY01400084'};{'HP P1230 Serial Number: CNV4300070'}];
+Gamma = [2.8252,3.4603,2.2437];
+Brightness = [33,24,30];
+Dates = ['18/09/2016';'07/07/2016';'03/04/2016'];
+
 % Default values for the GUI screen:
 eye_tracking=1;
 choice.SubjectName = ''; % Subject name or number.
 choice.Session = 1; % The session number.
 
 % Parameters not used in the function, only saved for analysis:
-choice.Day = 1; % The day number.
-choice.Group = '1'; % The group number.
 choice.Sleep = '1'; % Hours of sleep.
-choice.Age = '1'; % The age of the subject.
-choice.Gender = 'Female'; % Gender of the subject.
-choice.GenderNumber = 1;
-choice.nTrials = 2; % Number of trials for each SOA.
-choice.nBlocks = 9; % Number of blocks in the session.
-choice.TargetTime = 17; % Target display time in milliseconds. 
+choice.nTrials = 5; % Number of trials in each try.
+choice.MaxTries = 1; % Number of tries allowed.
+choice.SOA = 340; % SOA time in milliseconds.
+choice.TargetTime = 17; % Target display time in milliseconds.
 
 % Keyboard keys for response:
 choice.TRKeys = 't'; % 'T' for fixation and row for alignment.
 choice.LCKeys = 'l'; % 'L' for fixation and column for alignment.
 
-choice.Device = 'Keyboard'; % Responce device, could be either 'Mouse' or 'Keyboard'.
+choice.Device = 'Mouse'; % Responce device, could be either 'Mouse' or 'Keyboard'.
 choice.DeviceNumber = 2;
 choice.Screen = 'TMS Room'; % Screen used, could be either 'TMS Room', 'TDT Room' or 'Old HP'.
 choice.ScreenNumber = 1;
-choice.ReTraining = 0;
 % Number of columns and rows of lines in the backround of the stimuli:
 choice.VerticalLines = 19;
 choice.HorizontalLines = 19;
@@ -71,7 +67,7 @@ choice.Load = 0; % A value to control the loading of a previous file.
 % values are legal and no errors found:
 while 1
     choice = choosedialog(choice); % Calling the subfunction defining the GUI.
-    if ~choice.Answer
+     if ~choice.Answer
         return
     end
     
@@ -86,33 +82,32 @@ while 1
             W = whos(matfile(filename));
             Continue = 0;
             for i = 1:length(W)
-                if strcmp(W(i).name,'ThresholdTraining')
+                if strcmp(W(i).name,'InitialTraining')
                     Continue = 1;
                     break
                 end
             end
+            load(filename);
             if Continue
-                if isfield(ThresholdTraining,'Parameters')
-                    Parameters = ThresholdTraining.Parameters;
+                if isfield(InitialTraining,'Parameters')
+                    Parameters = InitialTraining.Parameters;
                     Session = length(Parameters); 
-                    choice = ThresholdTraining.choose(Session); %#ok<*NODEF>
+                    choice = InitialTraining.choose(Session); %#ok<*NODEF>
                     choice.Session = Session+1;
-                    if choice.Session==2
-                        choice.nTrials = 2;
-                        choice.nBlocks = 9;
-                        choice.ReTraining = 1;
-                    else
-                        choice.ReTraining = 0;
+                end
+                if isfield(InitialTraining,'Times')
+                    Times = InitialTraining.Times;
+                end
+                if isfield(InitialTraining,'Output')
+                    Output = InitialTraining.Output;
+                    choice.MaxTries = choice.MaxTries-Output(Session).Tries;
+                    if choice.MaxTries<1
+                        h = warndlg('Number of tries done exceeds maximum allowed. Please reset maximum.');
+                        uiwait(h);
                     end
                 end
-                if isfield(ThresholdTraining,'Times')
-                    Times = ThresholdTraining.Times;
-                end
-                if isfield(ThresholdTraining,'Output')
-                    Output = ThresholdTraining.Output;
-                end
             else
-                h = warndlg(['Threshold Training for Subject ',choice.SubjectName,' does not exist']);
+                h = warndlg(['Initial Training for subject ',choice.SubjectName,' does not exist']);
                 uiwait(h);
             end
         else
@@ -134,23 +129,18 @@ while 1
         uiwait(h);
         continue
     end
-    if isempty(num2str(choice.Day)) || isnan(str2double(num2str(choice.Day)))
-        h = warndlg('The Day must be a number!');
-        uiwait(h);
-        continue
-    end
-    if isempty(num2str(choice.Group)) || isnan(str2double(num2str(choice.Group)))
-        h = warndlg('The Group must be a number!');
-        uiwait(h);
-        continue
-    end
     if isempty(num2str(choice.nTrials)) || isnan(str2double(num2str(choice.nTrials)))
         h = warndlg('Number of trials must be a number!');
         uiwait(h);
         continue
     end
-    if isempty(num2str(choice.nBlocks)) || isnan(str2double(num2str(choice.nBlocks)))
-        h = warndlg('Number of blocks must be a number!');
+    if isempty(num2str(choice.MaxTries)) || isnan(str2double(num2str(choice.MaxTries))) || str2double(num2str(choice.MaxTries))<1
+        h = warndlg('Number of maximum tries must be a positive number!');
+        uiwait(h);
+        continue
+    end
+    if isempty(num2str(choice.SOA)) || isnan(str2double(num2str(choice.SOA)))
+        h = warndlg('SOA time (in milliseconds) must be a number!');
         uiwait(h);
         continue
     end
@@ -159,13 +149,8 @@ while 1
         uiwait(h);
         continue
     end
-    if choice.TargetTime>40
-        h = warndlg('Target time is more than the shortest SOA time!');
-        uiwait(h);
-        continue
-    end
-    if isempty(num2str(choice.Age)) || isnan(str2double(num2str(choice.Age)))
-        h = warndlg('Age must be a number!');
+    if choice.TargetTime>choice.SOA
+        h = warndlg('Target time must be less than SOA time!');
         uiwait(h);
         continue
     end
@@ -230,36 +215,36 @@ while 1
         uiwait(h);
         continue
     end
-        
+    
     % Checking if a file for the subject already exists. If so, the old
     % data is loaded to be saved as a new session. If the wanted session
-    % already exists, a warning is presented before overwriting.
+    % already exists, a warning is presented before overwriting:
     filename = ['TDT_Subject_',choice.SubjectName,'_Results.mat'];
     if ~isempty(dir(filename))
         load(filename);
         W = whos(matfile(filename));
         Continue = 0;
         for i = 1:length(W)
-            if strcmp(W(i).name,'ThresholdTraining')
+            if strcmp(W(i).name,'InitialTraining')
                 Continue = 1;
                 break
             end
         end
-        if Continue && isfield(ThresholdTraining,'Parameters') && length(ThresholdTraining.Parameters)>=choice.Session
-            question1 = questdlg(['TDT Threshold Training results for subject "',choice.SubjectName,...
+        if Continue && isfield(InitialTraining,'Parameters') && length(InitialTraining.Parameters)>=choice.Session
+            question1 = questdlg(['TDT Initial Training results for subject "',choice.SubjectName,...
                                   '", Session ',num2str(choice.Session),', already exist and will be',...
                                   'overwritten, continue?'],'!!WARNING!!','Yes','No','No');
             if strcmp(question1,'No')
                 continue
             else
-                if isfield(ThresholdTraining,'Times')
-                    Times = ThresholdTraining.Times(1:choice.Session-1);
+                if isfield(InitialTraining,'Times')
+                    Times = InitialTraining.Times(1:choice.Session-1);
                 end
-                if isfield(ThresholdTraining,'Output')
-                    Output = ThresholdTraining.Output(1:choice.Session-1);
+                if isfield(InitialTraining,'Output')
+                    Output = InitialTraining.Output(1:choice.Session-1);
                 end
-                if isfield(ThresholdTraining,'Parameters')
-                    Parameters = ThresholdTraining.Parameters(1:choice.Session-1);
+                if isfield(InitialTraining,'Parameters')
+                    Parameters = InitialTraining.Parameters(1:choice.Session-1);
                 end
             end
         end
@@ -269,12 +254,12 @@ while 1
     
 end
 
-% Checking if a Initial training struct exists to save it again:
-SaveInitialTraining = 0;
+% Checking if a Threshold training struct exists to save it again:
+SaveThresholdTraining = 0;
 W = whos;
 for i = 1:length(W)
-    if strcmp(W(i).name,'InitialTraining')
-        SaveInitialTraining = 1;
+    if strcmp(W(i).name,'ThresholdTraining')
+        SaveThresholdTraining = 1;
         break
     end
 end
@@ -286,14 +271,13 @@ h = warndlg(['The screen chosen is: ',Screens{choice.ScreenNumber},'. Make sure 
              '%! These values are updated to: ',Dates(choice.ScreenNumber,:),'.'],'Screen Choosing');
 uiwait(h);
 
-
 %% Parameter tuning. Values in this section are changable.
 
 % Changable parameters for the experiment. change only when absolutely sure
 % about the change. The default values are updated to 9/10/2016.
 
 Session = choice.Session;
-ThresholdTraining.choose(Session) = choice; % Saving the GUI parameters.
+InitialTraining.choose(Session) = choice; % Saving the GUI parameters.
 SubjectName = choice.SubjectName; %#ok<*NASGU>
 
 % Visual parameters:
@@ -303,8 +287,8 @@ Parameters(Session).VL = choice.VerticalLines;
 Parameters(Session).HL = choice.HorizontalLines;
 Parameters(Session).T_Hor = upper(choice.TRKeys);
 Parameters(Session).L_Ver = upper(choice.LCKeys);
-Parameters(Session).TargetOffset = [choice.TargetHorizontalOffset,choice.TargetVerticalOffset];
 Parameters(Session).Orientation = choice.Orientation;
+Parameters(Session).TargetOffset = [choice.TargetHorizontalOffset,choice.TargetVerticalOffset];
 % Parameters not from GUI:
 Parameters(Session).BackgroundColor = 1; % Color of background. Default is 1.
 Parameters(Session).StimuliColor = 255; % Color of lines and letters in stimuli. Default is 255.
@@ -332,14 +316,15 @@ Parameters(Session).SampleRate = 44100; % Sound sample rate. Default is 44100;
 
 % Timing parameters:
 % Parameters from GUI:
+Times(Session).SOA = str2double(num2str(choice.SOA))/1000; % SOA (Stimulus-to-mask Onset Asynchrony) within each trial.
 Times(Session).Target = str2double(num2str(choice.TargetTime))/1000; % Target display time.
+Times(Session).InnerTime = Times(Session).SOA-Times(Session).Target;
 % Parameters not from GUI:
 Times(Session).FirstFixation = 3; % Time of pre-experiment (dummy) cross-fixation block in seconds. Default is 3.
 Times(Session).FinalFixation = 3; % Time of post-experiment (rest) cross-fixation block in seconds. Default is 3.
 Times(Session).FixationBlockBlank = 1; % Time of blank screen within each cross-fixation block in seconds (at the end of the block). Default is 1.
 Times(Session).Blank = 0.300; % Time of blank screen within each trial in seconds. Default is 0.300.
 Times(Session).Mask = 0.100; % Time of mask screen within each trial in seconds. Default is 0.100.
-Times(Session).SOAs = repmat([340 300 260 240 220 200 180 160 140 120 100 80 60 40],1,choice.nTrials); % SOA (Stimulus-to-mask Onset Asynchrony) times which will be used in each block.
 
 %% Set up the experiment. DO NOT change this section!
 
@@ -354,7 +339,6 @@ Parameters(Session).BackgroundColor = ((Parameters(Session).BackgroundColor/255)
 Parameters(Session).StimuliColor = ((Parameters(Session).StimuliColor/255)^(1/Parameters(Session).GammaCorrection))*255;
 Parameters(Session).TextColor = ((Parameters(Session).TextColor/255)^(1/Parameters(Session).GammaCorrection))*255;
 Parameters(Session).MaskColor = ((Parameters(Session).MaskColor/255)^(1/Parameters(Session).GammaCorrection))*255;
-
 
 % Sound card regarding commands:
 clearvars pahandle;
@@ -382,15 +366,15 @@ whichScreen = max(Screen('Screens'));
 
 % Check for existence of backup folders. If none exist, a warning message
 % appears before the experiment continues without backup saves:
-if isempty(dir('D:\Ylka\TDT_censor-main\Data\'))
-    question2 = questdlg(['Local backup folder "D:\Ylka\08_TDT_one_task-main\Data\" not found and no local backups'...
+if isempty(dir('C:\Backups'))
+    question2 = questdlg(['Local backup folder "C:/Backups" not found and no local backups'...
                           ' will be saved, continue?'],'!!WARNING!!','Yes','No','No');
     if strcmp(question2,'No')
         return
     end
 end
-if isempty(dir('D:\Ylka\TDT_censor-main\Data\'))
-    question2 = questdlg(['Drive backup folder "D:\Ylka\08_TDT_one_task-main\Data\" not found and no drive backups'...
+if isempty(dir('Z:\Yehuda\Backups'))
+    question2 = questdlg(['Drive backup folder "Z:\Yehuda\Backups" not found and no drive backups'...
                           ' will be saved, continue?'],'!!WARNING!!','Yes','No','No');
     if strcmp(question2,'No')
         return
@@ -423,12 +407,12 @@ catch
     end
     oldResolution = Screen('Resolution', whichScreen);
 end
-Screen('Preference', 'SkipSyncTests', 1);
 Resolution = Screen('Resolution', whichScreen);
 [window1, windowRect] = Screen('Openwindow',whichScreen,Parameters(Session).BackgroundColor,[],[],2); % Opening the onscreen window.
 Parameters(Session).W = Resolution.width; % screen width
 Parameters(Session).H = Resolution.height; % screen height
 Parameters(Session).Hz = Resolution.hz;
+
 
 % Parameters for the stimuli images creation:
 Parameters(Session).m = round(choice.RelativeSize*Parameters(Session).H/choice.VerticalLines);
@@ -439,12 +423,17 @@ Times(Session).slack = Screen('GetFlipInterval', window1)/2;
 % Display blank screen:
 Screen(window1,'FillRect',Parameters(Session).BackgroundColor);
 Screen('Flip', window1);
-% Parameters for the stimuli images creation:
+
+% More timing Parameters (non-changable):
+Times(Session).slack = Screen('GetFlipInterval', window1)/2;
 
 % Set up keyboard for receiving data:
 ListenChar(0);
 KbQueueCreate;
 KbQueueStart;
+
+% Number of the current try (this parameter changes throughout the function):
+Output(Session).Tries = 1;
 
 % Prepare the textures for the cross and circle fixation screens:
 Circle_Image = TDT_Circle(Parameters(Session));
@@ -452,9 +441,21 @@ CircleDisplay = Screen('MakeTexture', window1, Circle_Image);
 Cross_Image = TDT_Cross(Parameters(Session));
 CrossDisplay = Screen('MakeTexture', window1, Cross_Image);
 
+% Prepare the Output matrices with default values which will be reordered
+% randomally in each try:
+Output(Session).Displays = 84*ones(2,choice.nTrials,Output(Session).Tries);
+Output(Session).Displays(2,:,:) = 45;
+% Prepare the Output matrices with default values which will change
+% according to the subject's responses:
+Output(Session).Responses = char(84*ones(2,choice.nTrials,Output(Session).Tries));
+Output(Session).Responses(2,:,:) = '-';
+Output(Session).ResponseTimes = zeros(2,choice.nTrials,Output(Session).Tries);
+
 % A parameter indicating whether the subject finished the training or the
 % training was stopped by the experimenter:
-Output(Session).Finished = 'No';
+Output(Session).Finished = 'Yes';
+% A running parameter for the number of exits to introduction:
+exits = 1;
 
 % Screen priority
 Priority(MaxPriority(window1));
@@ -463,7 +464,10 @@ Priority(2);
 HideCursor(whichScreen); % Hide the mouse cursor.
 itime = GetSecs; % Time of the beginning of the training.
 
+stop = 0; % A parameter for stopping the tries loop.
+
 %% Run experiment.  DO NOT change this section!
+
 if eye_tracking
     setup_arrington
     save_eye_data=1; %open a file in viewpoint
@@ -493,7 +497,6 @@ if eye_tracking
     vpx_SendCommandString('dataFile_Pause False');
     %vpx_SendCommandString('dataFile_InsertString "CALSTART"'); %send onset of whole task
 end
-
 
 % Welcome screen:
 % Welcome screen:
@@ -625,42 +628,83 @@ end
           %%%%%%%%%%%
 
 
-b = 1; % The current block. This parameter changes throughout the session.
-% A loop for each block:
-while b < choice.nBlocks+1
-    % Prepare the Output matrices with default values which will be
-    % reordered randomally in each block:
-    Output(Session).Displays(:,:,b) = 84*ones(2,length(Times(Session).SOAs));
-    Output(Session).Displays(2,:,b) = 45;
-    Output(Session).SOAs(b,:) = zeros(1,length(Times(Session).SOAs));
-    % Prepare the Output matrices with default values which will change
-    % according to the subject's responses:
-    Output(Session).Responses(:,:,b) = char(45*ones(1,length(Times(Session).SOAs)));
-    % Output(Session).Responses(2,:,b) = '-';
-    Output(Session).ResponseTimes(:,:,b) = zeros(1,length(Times(Session).SOAs));
-    Output(Session).SOASuccess(:,:,b) = zeros(length(Times(Session).SOAs)/choice.nTrials,2);
+% A loop for each try:
+while Output(Session).Tries<=choice.MaxTries && ~stop
+    
+    if Output(Session).Tries==1
         
+        if choice.DeviceNumber==1
+            text = 'Welcome to the experiment training. Press the mouse to begin';
+        else
+            text = 'Lets start training. Press the space bar to begin';
+        end
+        DrawFormattedText(window1,text, 'center', 'center', Parameters(Session).TextColor);
+        Screen('Flip',window1);
+
+        KbQueueFlush([],2);
+        if choice.DeviceNumber==1
+            % Wait for subject to press the mouse:
+            buttons = [0 0 0];
+            while ~any(buttons)
+                [~,~,buttons] = GetMouse;
+                [~,~,keyCode] = KbCheck;
+                if keyCode(27)
+                    % Exit the training when clicking the 'esc' key:
+                    Output(Session).Finished = 'No';
+                    PsychPortAudio('Close' ,pahandle);
+                    clearvars pahandle;
+                    close all;
+                    Screen(window1,'Close'); % Close the onscreen window.
+                    sca;
+                    Screen('Resolution', whichScreen, oldResolution.width, oldResolution.height, oldResolution.hz); % Restore screen original resolution and refresh rate.
+                    return
+                end
+            end
+            while any(buttons)
+                [~,~,buttons] = GetMouse;
+            end
+        else
+            % Wait for subject to press spacebar:
+            while 1
+                [~,~,keyCode] = KbCheck;
+                if keyCode(32)
+                    break
+                elseif keyCode(27)
+                    % Exit the training when clicking the 'esc' key:
+                    Output(Session).Finished = 'No';
+                    PsychPortAudio('Close' ,pahandle);
+                    clearvars pahandle;
+                    close all;
+                    Screen(window1,'Close'); % Close the onscreen window.
+                    sca;
+                    Screen('Resolution', whichScreen, oldResolution.width, oldResolution.height, oldResolution.hz); % Restore screen original resolution and refresh rate.
+                    return
+                end
+            end
+        end
+        
+    end
+
     % Display the cross fixation:
     Screen('DrawTexture', window1, CrossDisplay);
     flipTime = Screen('Flip', window1);
  
-    % randomizing the fixation, alignments and SOA's for the current block:
-    order = zeros(length(Times(Session).SOAs),1);
-    order(round(length(Times(Session).SOAs)/2)+1:end) = 1;
-    order = order(randperm(length(Times(Session).SOAs)));
-    Output(Session).Displays(1,~order,b) = 76;
-    order = order(randperm(length(Times(Session).SOAs)));    
-    Output(Session).Displays(2,~order,b) = 124;
-    Output(Session).SOAs(b,:) = Times(Session).SOAs(randperm(length(Times(Session).SOAs)));
+    % randomizing the fixation and alignments for the current try:
+    order = zeros(choice.nTrials,1);
+    order(round(choice.nTrials/2)+1:end) = 1;
+    order = order(randperm(choice.nTrials));
+    Output(Session).Displays(1,~order,Output(Session).Tries) = 76;
+    order = order(randperm(choice.nTrials));    
+    Output(Session).Displays(2,~order,Output(Session).Tries) = 124;
     % An array of textures to display:
-    imageDisplay = zeros(length(Times(Session).SOAs),2);
-
+    imageDisplay = zeros(choice.nTrials,2);
+    
     % Prepare the textures for the targets and masks for all the trials in
-    % the current block:
-    for t = 1:length(Times(Session).SOAs)
+    % the current try:
+    for t = 1:choice.nTrials
 
         % Load images into the texture array:
-        img1 = TDT_Target(Parameters(Session),Output(Session).Displays(1,t,b),Output(Session).Displays(2,t,b));
+        img1 = TDT_Target(Parameters(Session),Output(Session).Displays(1,t,Output(Session).Tries),Output(Session).Displays(2,t,Output(Session).Tries));
         img2 = TDT_Mask(Parameters(Session));
         imageDisplay(t,1) = Screen('MakeTexture', window1, img1);
         imageDisplay(t,2) = Screen('MakeTexture', window1, img2);
@@ -672,7 +716,7 @@ while b < choice.nBlocks+1
     flipTime = Screen('Flip', window1, flipTime + Times(Session).FirstFixation - Times(Session).FixationBlockBlank - Times(Session).slack);
 
     % A loop for each trial:
-    for t = 1:length(Times(Session).SOAs)
+    for t = 1:choice.nTrials
 
         % Display circle fixation:
         Screen('DrawTexture', window1, CircleDisplay);
@@ -685,11 +729,30 @@ while b < choice.nBlocks+1
         if eye_tracking
             vpx_SendCommandString(['dataFile_insertmarker B']);
         end
+
         if choice.DeviceNumber==1
-            % Wait for subject to press the mouse wheel
+            % Wait for subject to press the mouse wheel:
             buttons = [0 0 0];
             while ~buttons(2)
                 [~,~,buttons] = GetMouse;
+                [~,~,keyCode] = KbCheck;
+                if keyCode(27)
+                    % Exit to an introduction session when pressing the
+                    % 'esc' key during the circle fixation screen:
+                    KbReleaseWait;
+                    KbQueueFlush([],2);
+                    IntroTrials = InsideIntro(Parameters(Session),choice.DeviceNumber,window1);
+                    KbReleaseWait;
+                    KbQueueFlush([],2);
+                    % Saving the information about the current exit to introduction:
+                    Output(Session).IntroductionExits{exits} = ['Exit number ',num2str(exits),' at try number ',...
+                                                                num2str(Output(Session).Tries),' trial number ',num2str(t),...
+                                                                '. ',num2str(IntroTrials),' introduction trials.'];
+                    exits = exits+1;
+                    % Displaying the circle fixation back again:
+                    Screen('DrawTexture', window1, CircleDisplay);
+                    Screen('Flip', window1);
+                end
             end
             while any(buttons)
                 [~,~,buttons] = GetMouse;
@@ -701,14 +764,29 @@ while b < choice.nBlocks+1
                 [~,~,keyCode] = KbCheck;
                 if keyCode(32)
                     break
+                elseif keyCode(27)
+                    % Exit to an introduction session when pressing the
+                    % 'esc' key during the circle fixation screen:
+                    KbReleaseWait;
+                    KbQueueFlush([],2);
+                    IntroTrials = InsideIntro(Parameters(Session),choice.DeviceNumber,window1);
+                    KbReleaseWait;
+                    KbQueueFlush([],2);
+                    % Saving the information about the current exit to introduction:
+                    Output(Session).IntroductionExits{exits} = ['Exit number ',num2str(exits),' at try number ',...
+                                                                num2str(Output(Session).Tries),' trial number ',num2str(t),...
+                                                                '. ',num2str(IntroTrials),' introduction trials.'];
+                    exits = exits+1;
+                    % Displaying the circle fixation back again:
+                    Screen('DrawTexture', window1, CircleDisplay);
+                    Screen('Flip', window1);
                 end
             end
         end
-        
+
         % Display the blank screen:
         Screen(window1, 'FillRect', Parameters(Session).BackgroundColor);
         flipTime = Screen('Flip', window1);
-
 
         % Display the target screen:
         Screen('DrawTexture', window1, imageDisplay(t,1));
@@ -724,7 +802,7 @@ while b < choice.nBlocks+1
 
         % Display the mask screen:
         Screen('DrawTexture', window1, imageDisplay(t,2));
-        flipTime = Screen('Flip', window1, flipTime + Output(Session).SOAs(b,t)/1000 - Times(Session).Target - Times(Session).slack);
+        flipTime = Screen('Flip', window1, flipTime + Times(Session).InnerTime - Times(Session).slack);
 
         if eye_tracking
             vpx_SendCommandString(['dataFile_insertmarker M']);
@@ -749,15 +827,15 @@ while b < choice.nBlocks+1
                 [~,~,buttons1] = GetMouse;
             end
             if buttons1(3)
-                Output(Session).Responses(1,t,b) ='L';
+                Output(Session).Responses(1,t,Output(Session).Tries) ='L';
             end
-            if Output(Session).Responses(1,t,b)~=Output(Session).Displays(1,t,b)
+            if Output(Session).Responses(1,t,Output(Session).Tries)~=Output(Session).Displays(1,t,Output(Session).Tries)
                 % Playing the error sound for a wrong fixation response:
                 PsychPortAudio('Stop', pahandle);
                 PsychPortAudio('UseSchedule', pahandle, 3);
                 PsychPortAudio('Start', pahandle);
             end
-            Output(Session).ResponseTimes(1,t,b) = GetSecs - flipTime;
+            Output(Session).ResponseTimes(1,t,Output(Session).Tries) = GetSecs - flipTime;
             buttons2 = buttons1;
             while (~nonemouse && buttons1(1)==buttons2(1) && buttons1(3)==buttons2(3)) || (nonemouse && ~buttons2(1) && ~buttons2(3))
                 [~,~,buttons2] = GetMouse;
@@ -765,9 +843,9 @@ while b < choice.nBlocks+1
                     nonemouse = 1;
                 end
             end
-            Output(Session).ResponseTimes(2,t,b) = GetSecs - flipTime;
+            Output(Session).ResponseTimes(2,t,Output(Session).Tries) = GetSecs - flipTime;
             if buttons2(3) && (~buttons1(3) ||  ~buttons2(1))
-                Output(Session).Responses(2,t,b) ='|';
+                Output(Session).Responses(2,t,Output(Session).Tries) ='|';
             end
             while any(buttons2)
                 [~,~,buttons2] = GetMouse;
@@ -778,243 +856,62 @@ while b < choice.nBlocks+1
             % keys for response, and recording the timings of the presses:
             i = 1;
             KbQueueFlush([],2);
-            while i<2
+            while i<3
                 [event, ~] = PsychHID('KbQueueGetEvent');
                 if ~isempty(event) && ~event.Pressed && ismember(event.Keycode,[Parameters(Session).L_Ver,Parameters(Session).T_Hor])
                     if ismember(event.Keycode,Parameters(Session).L_Ver)
-                        % if i==1
-                        %     Output(Session).Responses(i,t,b) ='L';
-                        % else
-                        %     Output(Session).Responses(i,t,b) ='|';
-                        % end
-                        Output(Session).Responses(i,t,b) = '|'
+                        if i==1
+                            Output(Session).Responses(i,t,Output(Session).Tries) ='L';
+                        else
+                            Output(Session).Responses(i,t,Output(Session).Tries) ='|';
+                        end
                     end
-                    % if i==1 && (Output(Session).Responses(1,t,b)~=Output(Session).Displays(1,t,b))
-                    %     % Playing the error sound for a wrong fixation response:
-                    %     PsychPortAudio('Stop', pahandle);
-                    %     PsychPortAudio('UseSchedule', pahandle, 3);
-                    %     PsychPortAudio('Start', pahandle);
-                    % end
-                    Output(Session).ResponseTimes(i,t,b) = event.Time - flipTime;
+                    if i==1 && (Output(Session).Responses(1,t,Output(Session).Tries)~=Output(Session).Displays(1,t,Output(Session).Tries))
+                        % Playing the error sound for a wrong fixation response:
+                        PsychPortAudio('Stop', pahandle);
+                        PsychPortAudio('UseSchedule', pahandle, 3);
+                        PsychPortAudio('Start', pahandle);
+                    end
+                    Output(Session).ResponseTimes(i,t,Output(Session).Tries) = event.Time - flipTime;
                     i = i+1;
                 end
             end
         end
         
         pause(1); % A pause of 1 second at the end of each trial after receiving the responses.
-        
-    end    
+
+    end
 
     % Display the cross fixation:
     Screen('DrawTexture', window1, CrossDisplay);
     flipTime = Screen('Flip', window1);
+
+%% End the Try. DO NOT change this section!
     
-    % Calculating the output arrays regarding the success of the subject
-    % according to the responses of the current block:
-    % Chronologic successes:
-    Output(Session).Successes(:,:,b) = char(Output(Session).Responses(:,:,b))==char(Output(Session).Displays(:,:,b));
-    % Successes by SOA:
-    Output(Session).SortedSuccesses(:,:,b) = Output(Session).Successes(:,:,b);
-    [~,temp] = sort(Output(Session).SOAs(b,:),'descend');
-    Output(Session).SortedSuccesses(1,:,b) = Output(Session).Successes(1,temp,b);
-    Output(Session).SortedSuccesses(2,:,b) = Output(Session).Successes(2,temp,b);
-    temp = Output(Session).SortedSuccesses(:,:,b)';
-    % Average successes by SOA:
-    for t = 1:length(Times(Session).SOAs)/choice.nTrials
-        Output(Session).SOASuccess(t,:,b) = mean(temp(choice.nTrials*(t-1)+1:choice.nTrials*t,:),1);
-    end
-    
-    % Checking whether the session finished, a new block is needed, or the
-    % subject should re-enter training:
-    Continue = 1;
-    if choice.ReTraining && b<4 && sum(Output(Session).SortedSuccesses(2,1:6,b))<5
-        % Subject should re-enter training:
-        text = 'Block finished, please call the instructor';
-        Continue = 0;
+    % Convert Output matrices to 'char'. for the fixations the options are 'T'
+    % or 'L'. For the alignments the options are '-' for horizontal and '|' for vertical.
+    % Make sure you remember that Matan is the queen of everything.
+    % Both matrices are 3-dimensional: each 3-dimension page is for a try,
+    % each column in a page is for a trial, the first row is for fixations
+    % and the second row is for alignments:
+    Output(Session).Responses = char(Output(Session).Responses);
+    if Output(Session).Tries<choice.MaxTries 
+        % Results are good enough, finish tries:
+        text = ['Well done! please call the instructor (',num2str(sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(1,:,Output(Session).Tries)))),...
+                 num2str(sum(Output(Session).Responses(2,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))),')'];
+        stop = 1;
     else
-        if b < choice.nBlocks
-            %recalibration
-            if choice.DeviceNumber == 1
-                text = 'Welcome to the experiment. Press the mouse to begin';
-            else
-                text = 'Calibration.\n\nPlease press the spacebar to start the calibration.\n\nLook at the fixation dots and press the spacebar whilst looking.\n\nLet go when the fixation dot disappears.';
-            end
-            DrawFormattedText(window1, text, 'center', 'center', Parameters(Session).TextColor);
-            Screen('Flip', window1);
-            
-            if choice.DeviceNumber==1
-                % Wait for subject to press the mouse
-                buttons = [0 0 0];
-                while ~any(buttons)
-                    [~,~,buttons] = GetMouse;
-                    [~,~,keyCode] = KbCheck;
-                    if keyCode(27)
-                        % Exit the experiment when clicking the 'esc' key:
-                        close all;
-                        PsychPortAudio('Close' ,pahandle);
-                        clearvars pahandle;
-                        Screen(window1,'Close'); % Close the onscreen window.
-                        sca;
-                        Screen('Resolution', whichScreen, oldResolution.width, oldResolution.height, oldResolution.hz); % Restore screen original resolution and refresh rate.
-                        KbQueueStop;
-                        return
-                    end
-                end
-                while any(buttons)
-                    [~,~,buttons] = GetMouse;
-                end
-            else
-                % Wait for subject to press spacebar:
-                while 1
-                    [~,~,keyCode] = KbCheck;
-                    if keyCode(32)
-                        break
-                    elseif keyCode(27)
-                        % Exit the experiment when clicking the 'esc' key:
-                        close all;
-                        PsychPortAudio('Close' ,pahandle);
-                        clearvars pahandle;
-                        Screen(window1,'Close'); % Close the onscreen window.
-                        sca;
-                        Screen('Resolution', whichScreen, oldResolution.width, oldResolution.height, oldResolution.hz); % Restore screen original resolution and refresh rate.
-                        KbQueueStop;
-                        return
-                    end
-                end
-            end
-            
-            %%% do a fixation calibration task for estimating fixation window
-            text = 'Fixate the dots and press the space bar';
-            DrawFormattedText(window1,text, 'center', 'center', Parameters(Session).TextColor);
-            Screen('Flip',window1);
-            
-            %choice.ScreenWidth
-            %choice.ScreenHeight
-            % Get the centre coordinate of the window
-            [xCenter, yCenter] = RectCenter(windowRect);
-            pix_per_deg=32;
-            xFix = xCenter;
-            yFix = yCenter;
-            coefAw=9;
-            trl_fix=2;
-            fix_spot_size=20;
-            fix_spot_size=20;
-            fix_spot_color=[Parameters(Session).BackgroundColor Parameters(Session).BackgroundColor 0];
-            % Increase the intensity of red and green components
-            brightness_factor = 2.5; % Adjust as needed
-            fix_spot_color(1:2) = fix_spot_color(1:2) * brightness_factor;
-            
-            % Ensure the values are within the valid range (0 to 255)
-            fix_spot_color = min(fix_spot_color, 255);
-            % Flip to clear
-            waitframes=1;
-            vbl = Screen('Flip', window1);
-            ifi = Screen('GetFlipInterval', window1);
-            
-            % Fixation task parameters
-            FixCtrTimeSecs = 1; % 500ms fixation task
-            FixCtrTimeFrames = round(FixCtrTimeSecs / ifi);
-            FixBreakTimeSecs = 1;
-            FixBreakTimeFrames = round(FixBreakTimeSecs / ifi);
-            
-            locs = {[xFix-coefAw*pix_per_deg; yFix-coefAw*pix_per_deg] [xFix-coefAw*pix_per_deg; yFix+coefAw*pix_per_deg] [xFix+coefAw*pix_per_deg; yFix-coefAw*pix_per_deg] [xFix+coefAw*pix_per_deg; yFix+coefAw*pix_per_deg]};
-            for i = 1:length(locs)
-                for j=1:trl_fix
-                    count = 0;
-                    tstart = tic;
-            
-                    while count < FixCtrTimeFrames
-                        Screen('DrawDots', window1, cell2mat(locs(i)), fix_spot_size, fix_spot_color, [], 2); %
-                        vbl = Screen('Flip', window1, vbl + (waitframes - 0.5) * ifi);
-            
-                        [keyIsDown, secs, keyCode] = KbCheck;
-                        if keyIsDown
-                            if eye_tracking && save_eye_data && count == 0
-                                strtosend = ['dataFile_insertstring "LOC'  num2str(i) '"'];
-                                vpx_SendCommandString(strtosend); %send details to eyetracker
-                            end
-                            count=count+1;
-                        elseif ~keyIsDown && count>0
-                            %the key is no longer pressed reset the count
-                            count=0;
-                        end
-                    end
-            
-                    count = 0;
-                    while count<100000000000000000
-            %            Screen('FillRect', window1, [screen_back screen_back screen_back], []);
-                        vbl = Screen('Flip', window1, vbl + (waitframes - 0.5) * ifi);
-                        [keyIsDown, secs, keyCode] = KbCheck;
-                        if ~keyIsDown
-                            break
-                            %                 else
-                            %                     if eye_tracking
-                            %                         [gazePointAw.x(end+1),gazePointAw.y(end+1)]=vpx_GetGazePoint(eye);
-                            %                         [gazePointAw.Px(end+1),gazePointAw.Py(end+1)]=vpx_GetGazePointSmoothed(eye);
-                            %                         gazePointAw.t(end+1)=toc(tstart);
-                            %                         gazePointAw.trig(end+1)=i;
-                            %                     end
-                        end
-                        count = count+1;
-                    end
-                end
-            end
-                      %%%%%%%%%%%
-
-
-            % Subject can continue to the next block:
-            if choice.DeviceNumber==1
-                text = 'Press the mouse to continue to the next block';
-            else
-                text = 'Press the space bar to continue to the next block';
-            end
-        else
-            % Experiment finished:
-            text = 'Session finished, please call the instructor';
-            Output(Session).Finished = 'Yes';
-            Continue = 0;
-        end
+        % Maximum number of tries performed, finish training:
+        text = ['Training finished. please call the instructor (',num2str(sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(1,:,Output(Session).Tries)))),...
+                 num2str(sum(Output(Session).Responses(2,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))),')'];
+        stop = 1;
     end
     DrawFormattedText(window1,text, 'center', 'center', Parameters(Session).TextColor);
-    Screen('Flip', window1, flipTime + Times(Session).FinalFixation - Times(Session).slack);
-    KbQueueFlush([],2);
+    Screen('Flip',window1, flipTime + Times(Session).FinalFixation - Times(Session).slack);
     
-    % Arranging the final struct for saving:
-    ThresholdTraining.Parameters = Parameters;
-    ThresholdTraining.Times = Times;
-    ThresholdTraining.Output = Output;
-    % Saving the data under the subject name in a local backup folder, a
-    % drive backup folder, and in the MATLAB's current folder.
-    % When the backup folders do not exist, no backup is saved and a
-    % warning message displays:
-    if SaveInitialTraining
-        try
-            save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PreWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining', 'InitialTraining');
-        catch
-            fprintf('''C:\\Backups'' folder does not exist, and no local backup saved!\n');
-        end
-        try
-            save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PreWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining', 'InitialTraining');
-        catch
-            fprintf('''Z:\\Yehuda\\Backups'' folder does not exist, and no drive backup saved!\n');
-        end
-        save(filename, 'SubjectName', 'InitialTraining', 'ThresholdTraining');
-    else
-        try
-            save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PreWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining');
-        catch
-            fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no local backup saved!\n');
-        end
-        try
-            save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PreWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining');
-        catch
-            fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no drive backup saved!\n');
-        end
-        save(filename, 'SubjectName', 'ThresholdTraining');
-    end
-   
     % Wating for press to continue or finish:
-    if Continue
+    KbQueueFlush([],2);
+    if ~stop
         if choice.DeviceNumber==1
             % Wait for subject to press mouse or esc:
             buttons = [0 0 0];
@@ -1023,7 +920,8 @@ while b < choice.nBlocks+1
                 [~,~,keyCode] = KbCheck;
                 if keyCode(27)
                     % Exit the experiment when clicking the 'esc' key:
-                    b = choice.nBlocks+1;
+                    stop = 1;
+                    Output(Session).Finished = 'No';
                     break
                 end
             end
@@ -1034,11 +932,12 @@ while b < choice.nBlocks+1
             % Wait for subject to press spacebar:
             while 1
                 [~,~,keyCode] = KbCheck;
-                if keyCode(32) && (b < choice.nBlocks)
+                if keyCode(32)
                     break
                 elseif keyCode(27)
                     % Exit the experiment when clicking the 'esc' key:
-                    b = choice.nBlocks+1;
+                    stop = 1;
+                    Output(Session).Finished = 'No';
                     break
                 end
             end
@@ -1048,160 +947,121 @@ while b < choice.nBlocks+1
         while 1
             [~,~,keyCode] = KbCheck;
             if keyCode(27)
-                b = choice.nBlocks+1;
                 break
             end
         end
     end
     
-    b = b+1; % Increasing the current number of block.
-
-end
-
-%% End the Training. DO NOT change this section!
-
-% Convert output matrices to 'char'. for the fixations the options are 'T'
-% or 'L'. For the alignments the options are '-' for horizontal and '|' for vertical.
-% Make sure you remember that Matan is the queen of everything.
-% Both matrices are 3-dimensional: each 3-dimension page is for a try,
-% each column in a page is for a trial, the first row is for fixations
-% and the second row is for alignments:
-Output(Session).Responses = char(Output(Session).Responses);
-Output(Session).Displays = char(Output(Session).Displays);
-% Total runtime of the training:
-Output(Session).TotalTrainingTime = GetSecs - itime; 
-Output(Session).TotalTrainingTime = [num2str(floor(Output(Session).TotalTrainingTime/60)),':',num2str(rem(Output(Session).TotalTrainingTime,60))]; % Total time of the training.
-% The date and time of the experiment:
-Output(Session).ExperimentDateTime = datestr(clock);
-
-% Finish the session:
-close all;
-PsychPortAudio('Close' ,pahandle);
-clearvars pahandle;
-Screen(window1,'Close'); % Close the onscreen window.
-sca;
-Screen('Resolution', whichScreen, oldResolution.width, oldResolution.height, oldResolution.hz); % Restore screen original resolution and refresh rate.
-KbQueueStop;
-
-% Arranging the final struct for saving:
-ThresholdTraining.Parameters = Parameters;
-ThresholdTraining.Times = Times;
-ThresholdTraining.Output = Output;
-
-% Saving the data under the subject name in a local backup folder, a
-% drive backup folder, and in the MATLAB's current folder. When the backup
-% folders do not exist, no backup is saved and a warning message displays:
-if SaveInitialTraining
-    try
-        save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PreWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining', 'InitialTraining');
-    catch
-        fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no local backup saved!\n');
+    % Columnize the introduction exits information for easier reading:
+    if isfield(Output(Session),'IntroductionExits')
+        Output(Session).IntroductionExits = Output(Session).IntroductionExits(:);
     end
-    try
-        save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PreWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining', 'InitialTraining');
-    catch
-        fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no drive backup saved!\n');
-    end
-    save(filename, 'SubjectName', 'ThresholdTraining', 'InitialTraining');
-else
-    try
-        save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PreWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining');
-    catch
-        fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no local backup saved!\n');
-    end
-    try
-        save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PreWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining');
-    catch
-        fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no drive backup saved!\n');
-    end
-    save(filename, 'SubjectName', 'ThresholdTraining');
-end
-
-% Question dialog asking whether to analyse Weibull or not:
-choice = questdlg('Analyse?','Analyse','Yes','No','Yes');
-
-% Weibull analysis when required:
-if strcmp(choice,'Yes')
-    % Parameters for the analysis:
-    start = [200; 10; 1];
-    options = optimset('TolX',0.1);
-    % The SOA times vector:
-    T = sort(unique(Times(Session).SOAs,'stable'),'descend')';
-    figure;
-    % The average success ratio per SOA:
-    y = mean(Output(Session).SOASuccess(:,2,:),3);
-    % Plotting the results:
-    plot(T,y,'ro');
-    hold on;
-    h = plot(T,y,'b');
-    hold on;
-    % Calculating the Weibull fit:
-    temp = lsqcurvefit('weibull_err1',start, T, y, [0 0 0], [inf inf 1], options, h );
-    % Saving the Weibull fit results:
-    WeibullAnalysis(Session).T_es = temp(1);
-    WeibullAnalysis(Session).b_es = temp(2);
-    WeibullAnalysis(Session).p_es = temp(3);
-    WeibullAnalysis(Session).t80 = fzero( 'WeibMinus', 0, [], temp(1), temp(2), temp(3), .8 );
-    % Plotting the Weibull fit curve:
-    z = Weibull(T, temp(1), temp(2), temp(3));
-    plot(T,z,'b');
-    % Displaying the results on top of the graph:
-    legend('data',['Weibull: T= ' num2str(temp(1)) ',   b= ' num2str(temp(2)) ',  t80= ' num2str(WeibullAnalysis(Session).t80) ', p= ' num2str(temp(3))]);
-    disp(['Estimated t80: ' num2str(WeibullAnalysis(Session).t80)]);
-    
-    % Saving the figure under the subject name in a local backup folder, a
-    % drive backup folder, and in the MATLAB's current folder.
-    % When the backup folders do not exist, no backup is saved and a
-    % warning message displays:
-    try
-        saveas(gcf,['D:\Ylka\08_TDT_one_task-main\Data\','Weibull_Graph_Subject_',SubjectName,'_Session_Number_',num2str(Session),datestr(now,'dd.mm.yy-HHMMSS'),'.fig']);
-    catch
-        fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no local backup figure saved!\n');
-    end
-    try
-        saveas(gcf,['D:\Ylka\08_TDT_one_task-main\Data\','Weibull_Graph_Subject_',SubjectName,'_Session_Number_',num2str(Session),datestr(now,'dd.mm.yy-HHMMSS'),'.fig']);
-    catch
-        fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no drive backup figure saved!\n');
-    end
-    saveas(gcf,['D:\Ylka\08_TDT_one_task-main\Data\', 'Weibull_Graph_Subject_',SubjectName,'_Session_Number_',num2str(Session),'.fig']);
-     
-    close all;
     % Arranging the final struct for saving:
-    ThresholdTraining.WeibullAnalysis = WeibullAnalysis;
+    InitialTraining.Parameters = Parameters;
+    InitialTraining.Times = Times;
+    InitialTraining.Output = Output;
     
     % Saving the data under the subject name in a local backup folder, a
     % drive backup folder, and in the MATLAB's current folder.
     % When the backup folders do not exist, no backup is saved and a
     % warning message displays:
-    if SaveInitialTraining
+    if SaveThresholdTraining
         try
-            save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PostWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining', 'InitialTraining');
+            save(['C:\Backups\',filename,'_',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'InitialTraining', 'ThresholdTraining');
         catch
-            fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no local backup saved!\n');
+            fprintf('''C:\\Backups'' folder does not exist, and no local backup saved!\n');
         end
         try
-            save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PostWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining', 'InitialTraining');
+            save(['Z:\Yehuda\Backups\',filename,'_',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'InitialTraining', 'ThresholdTraining');
         catch
-            fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no drive backup saved!\n');
+            fprintf('''Z:\\Yehuda\\Backups'' folder does not exist, and no drive backup saved!\n');
         end
-        save(filename, 'SubjectName', 'ThresholdTraining', 'InitialTraining');
+        save(filename, 'SubjectName', 'InitialTraining', 'ThresholdTraining');
     else
         try
-            save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PostWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining');
+            save(['C:\Backups\',filename,'_',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'InitialTraining');
         catch
-            fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no local backup saved!\n');
+            fprintf('''C:\\Backups'' folder does not exist, and no local backup saved!\n');
         end
         try
-            save(['D:\Ylka\08_TDT_one_task-main\Data\',filename,'_PostWeibull',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'ThresholdTraining');
+            save(['Z:\Yehuda\Backups\',filename,'_',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'InitialTraining');
         catch
-            fprintf('''D:\Ylka\08_TDT_one_task-main\Data\'' folder does not exist, and no drive backup saved!\n');
+            fprintf('''Z:\\Yehuda\\Backups'' folder does not exist, and no drive backup saved!\n');
         end
-        save(filename, 'SubjectName', 'ThresholdTraining');
+        save(filename, 'SubjectName', 'InitialTraining');
     end
     
-end
+    % Add pages for Output(Session) for the next try:
+    if ~stop && Output(Session).Tries<choice.MaxTries
+        Output(Session).Tries = Output(Session).Tries+1;
+        Output(Session).Displays(1,:,Output(Session).Tries) = 84*ones(1,choice.nTrials);
+        Output(Session).Displays(2,:,Output(Session).Tries) = 45*ones(1,choice.nTrials);
+        Output(Session).Responses(:,:,Output(Session).Tries) = char(84*ones(2,choice.nTrials));
+        Output(Session).Responses(2,:,Output(Session).Tries) = '-';
+        Output(Session).ResponseTimes(:,:,Output(Session).Tries) = zeros(2,choice.nTrials);
+    end
     
-rmpath ./WeibullAnalysis/
+    
+end
+
+
+
+%% End the Training. DO NOT change this section!
+
+% Convert Output matrices to 'char'. for the fixations the options are 'T'
+% or 'L'. For the alignments the options are '-' for horizontal and '|' for vertical.
+% Both matrices are 3-dimensional: each 3-dimension page is for a try,
+% each column in a page is for a trial, the first row is for fixations
+% and the second row is for alignments:
+Output(Session).Displays = char(Output(Session).Displays);
+% Total runtime of the training:
+Output(Session).TotalTrainingTime = GetSecs - itime; 
+Output(Session).TotalTrainingTime = [num2str(floor(Output(Session).TotalTrainingTime/60)),':',num2str(rem(Output(Session).TotalTrainingTime,60))]; % Total time of the training.
+% The date and time of the experiment:
+Output(Session).TrainingDateTime = datestr(clock);
+
+% Finish the training:
+PsychPortAudio('Close' ,pahandle);
+clearvars pahandle;
+close all;
+Screen(window1,'Close'); % Close the onscreen window.
+sca;
+Screen('Resolution', whichScreen, oldResolution.width, oldResolution.height, oldResolution.hz); % Restore screen original resolution and refresh rate.
+
+% Arranging the final struct for saving:
+InitialTraining.Parameters = Parameters;
+InitialTraining.Times = Times;
+InitialTraining.Output = Output;
+
+% Saving the data under the subject name in a local backup folder, a
+% drive backup folder, and in the MATLAB's current folder. When the backup
+% folders do not exist, no backup is saved and a warning message displays:
+if SaveThresholdTraining
+    try
+        save(['C:\Backups\',filename,'_',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'InitialTraining', 'ThresholdTraining');
+    catch
+        fprintf('''C:\\Backups'' folder does not exist, and no local backup saved!\n');
+    end
+    try
+        save(['Z:\Yehuda\Backups\',filename,'_',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'InitialTraining', 'ThresholdTraining');
+    catch
+        fprintf('''Z:\\Yehuda\\Backups'' folder does not exist, and no drive backup saved!\n');
+    end
+    save(filename, 'SubjectName', 'InitialTraining', 'ThresholdTraining');
+else
+    try
+        save(['C:\Backups\',filename,'_',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'InitialTraining');
+    catch
+        fprintf('''C:\\Backups'' folder does not exist, and no local backup saved!\n');
+    end
+    try
+        save(['Z:\Yehuda\Backups\',filename,'_',datestr(now,'dd.mm.yy-HHMMSS'),'.mat'], 'SubjectName', 'InitialTraining');
+    catch
+        fprintf('''Z:\\Yehuda\\Backups'' folder does not exist, and no drive backup saved!\n');
+    end
+    save(filename, 'SubjectName', 'InitialTraining');
+end
+
 end
 
 
@@ -1224,22 +1084,22 @@ function choice = choosedialog(choice)
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.05 0.9 0.25 0.03],...
+              'Position',[0.05 0.95 0.25 0.03],...
               'String','Subject Name/Number:');
           
     uicontrol('Parent',d,...
               'Style','edit',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.05 0.85 0.25 0.05],...
+              'Position',[0.05 0.9 0.25 0.05],...
               'String',choice.SubjectName,...
               'Callback',@getName);
-       
-    % Load button:
+    
+    % Load button:   
     uicontrol('Parent',d,...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.125 0.8 0.1 0.045],...
+              'Position',[0.125 0.85 0.1 0.045],...
               'String','Load',...
               'Callback',@LoadSubject);
     
@@ -1248,159 +1108,112 @@ function choice = choosedialog(choice)
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.05 0.7 0.25 0.03],...
+              'Position',[0.05 0.8 0.25 0.03],...
               'String','Session Number:');
           
     uicontrol('Parent',d,...
               'Style','edit',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.05 0.65 0.25 0.05],...
+              'Position',[0.05 0.75 0.25 0.05],...
               'String',choice.Session,...
               'Callback',@getSession);
-    
-    % Day number:
-    uicontrol('Parent',d,...
-              'Style','text',...
-              'Units','normalized',...
-              'fontsize',FontSize,...
-              'Position',[0.05 0.6 0.25 0.03],...
-              'String','Day Number:');
-          
-    uicontrol('Parent',d,...
-              'Style','edit',...
-              'Units','normalized',...
-              'fontsize',FontSize,...
-              'Position',[0.05 0.55 0.25 0.05],...
-              'String',choice.Day,...
-              'Callback',@getDay);
-    
-    % Group number:
-    uicontrol('Parent',d,...
-              'Style','text',...
-              'Units','normalized',...
-              'fontsize',FontSize,...
-              'Position',[0.05 0.5 0.25 0.03],...
-              'String','Group Number:');
-          
-    uicontrol('Parent',d,...
-              'Style','edit',...
-              'Units','normalized',...
-              'fontsize',FontSize,...
-              'Position',[0.05 0.45 0.25 0.05],...
-              'String',choice.Group,...
-              'Callback',@getGroup);
-    
+   
+  
     % Sleep hours:
     uicontrol('Parent',d,...
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.05 0.4 0.25 0.03],...
+              'Position',[0.05 0.7 0.25 0.03],...
               'String','Sleep Hours:');
           
     uicontrol('Parent',d,...
               'Style','edit',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.05 0.35 0.25 0.05],...
+              'Position',[0.05 0.65 0.25 0.05],...
               'String',choice.Sleep,...
               'Callback',@getSleep);
-    
-    % Subject's gender:
-    uicontrol('Parent',d,...
-              'Style','text',...
-              'Units','normalized',...
-              'fontsize',FontSize,...
-              'Position',[0.05 0.3 0.25 0.03],...
-              'String','Gender:');
-          
-    uicontrol('Parent',d,...
-              'Style','popup',...
-              'Units','normalized',...
-              'fontsize',FontSize,...
-              'Position',[0.05 0.25 0.25 0.05],...
-              'Value',choice.GenderNumber,...
-              'String',{'Female';'Male'},...
-              'Callback',@getGender);
-    
-    % Subject's age:
-    uicontrol('Parent',d,...
-              'Style','text',...
-              'Units','normalized',...
-              'fontsize',FontSize,...
-              'Position',[0.05 0.2 0.25 0.03],...
-              'String','Age:');
-          
-    uicontrol('Parent',d,...
-              'Style','edit',...
-              'Units','normalized',...
-              'fontsize',FontSize,...
-              'Position',[0.05 0.15 0.25 0.05],...
-              'String',choice.Age,...
-              'Callback',@getAge);
     
     % Number of trials:
     uicontrol('Parent',d,...
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.9 0.25 0.03],...
+              'Position',[0.05 0.6 0.25 0.03],...
               'String','Number of Trials:');
           
     uicontrol('Parent',d,...
               'Style','edit',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.85 0.25 0.05],...
+              'Position',[0.05 0.55 0.25 0.05],...
               'String',choice.nTrials,...
               'Callback',@getTrials);
     
-    % Number of blocks:
+    % Maximum number of tries:
     uicontrol('Parent',d,...
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.8 0.25 0.03],...
-              'String','Number of Blocks:');
+              'Position',[0.05 0.5 0.25 0.03],...
+              'String','Maximum Number of Tries:');
           
     uicontrol('Parent',d,...
               'Style','edit',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.75 0.25 0.05],...
-              'String',choice.nBlocks,...
-              'Callback',@getBlocks);
-    
+              'Position',[0.05 0.45 0.25 0.05],...
+              'String',choice.MaxTries,...
+              'Callback',@getTries);
+          
+    % SOA time:
+    uicontrol('Parent',d,...
+              'Style','text',...
+              'Units','normalized',...
+              'fontsize',FontSize,...
+              'Position',[0.05 0.4 0.25 0.03],...
+              'String','SOA (ms):');
+          
+    uicontrol('Parent',d,...
+              'Style','edit',...
+              'Units','normalized',...
+              'fontsize',FontSize,...
+              'Position',[0.05 0.35 0.25 0.05],...
+              'String',choice.SOA,...
+              'Callback',@getSOA);
+          
     % Target time:
     uicontrol('Parent',d,...
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.7 0.25 0.03],...
+              'Position',[0.35 0.95 0.25 0.03],...
               'String','Target Time (ms):');
           
     uicontrol('Parent',d,...
               'Style','edit',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.65 0.25 0.05],...
+              'Position',[0.35 0.9 0.25 0.05],...
               'String',choice.TargetTime,...
               'Callback',@getTargetTime);
+
           
     % Response Device:
     uicontrol('Parent',d,...
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.6 0.25 0.03],...
+              'Position',[0.35 0.8 0.25 0.03],...
               'String','Response Device:');
           
     uicontrol('Parent',d,...
               'Style','popup',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.55 0.25 0.05],...
+              'Position',[0.35 0.75 0.25 0.05],...
               'Value',choice.DeviceNumber,...
               'String',{'Mouse';'Keyboard'},...
               'Callback',@getDevice);
@@ -1410,14 +1223,14 @@ function choice = choosedialog(choice)
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.5 0.25 0.03],...
+              'Position',[0.35 0.7 0.25 0.03],...
               'String','T/Row Response Keys:');
           
     uicontrol('Parent',d,...
               'Style','edit',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.45 0.25 0.05],...
+              'Position',[0.35 0.65 0.25 0.05],...
               'String',char(choice.TRKeys),...
               'Callback',@getTRKeys);
           
@@ -1426,14 +1239,14 @@ function choice = choosedialog(choice)
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.4 0.25 0.03],...
+              'Position',[0.35 0.6 0.25 0.03],...
               'String','L/Column Response Keys:');
           
     uicontrol('Parent',d,...
               'Style','edit',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.35 0.25 0.05],...
+              'Position',[0.35 0.55 0.25 0.05],...
               'String',char(choice.LCKeys),...
               'Callback',@getLCKeys);
           
@@ -1442,33 +1255,17 @@ function choice = choosedialog(choice)
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.3 0.25 0.03],...
+              'Position',[0.35 0.5 0.25 0.03],...
               'String','Screen:');
           
     uicontrol('Parent',d,...
               'Style','popup',...
               'Units','normalized',...
               'fontsize',FontSize,...
-              'Position',[0.35 0.25 0.25 0.05],...
+              'Position',[0.35 0.45 0.25 0.05],...
               'Value',choice.ScreenNumber,...
               'String',{'TMS Room';'TDT Room';'Old HP'},...
               'Callback',@getScreen);
-          
-    % Re-training condition check-box:
-    uicontrol('Parent',d,...
-              'Style','text',...
-              'Units','normalized',...
-              'HorizontalAlignment','left',...
-              'fontsize',FontSize,...
-              'Position',[0.37 0.17 0.2 0.04],...
-              'String','Re-Training Condition');
-          
-    uicontrol('Parent',d,...
-              'Style','checkbox',...
-              'Units','normalized',...
-              'Position',[0.35 0.17 0.02 0.05],...
-              'Value',choice.ReTraining,...
-              'Callback',@getReTraining);
           
     % Number of columns of lines:
     uicontrol('Parent',d,...
@@ -1642,20 +1439,11 @@ function choice = choosedialog(choice)
     function getSession(source,~)
         choice.Session = str2double(source.String);
     end
-    function getDay(source,~)
-        choice.Day = str2double(source.String);
-    end
     function getTrials(source,~)
         choice.nTrials = str2double(source.String);
     end
-    function getBlocks(source,~)
-        choice.nBlocks = str2double(source.String);
-    end
-    function getGroup(source,~)
-        choice.Group = str2double(source.String);
-    end
-    function getAge(source,~)
-        choice.Age = str2double(source.String);
+    function getTries(source,~)
+        choice.MaxTries = str2double(source.String);
     end
     function getSleep(source,~)
         choice.Sleep = str2double(source.String);
@@ -1664,9 +1452,8 @@ function choice = choosedialog(choice)
         choice.Device = char(source.String(source.Value,:));
         choice.DeviceNumber = source.Value;
     end
-    function getGender(source,~)
-        choice.Gender = char(source.String(source.Value,:));
-        choice.GenderNumber = source.Value;
+    function getSOA(source,~)
+        choice.SOA = str2double(source.String);
     end
     function getTargetTime(source,~)
         choice.TargetTime = str2double(source.String);
@@ -1680,9 +1467,6 @@ function choice = choosedialog(choice)
     function getScreen(source,~)
         choice.Screen = char(source.String(source.Value,:));
         choice.ScreenNumber = source.Value;
-    end
-    function getReTraining(source,~)
-        choice.ReTraining = source.Value;
     end
     function getVerticalLines(source,~)
         choice.VerticalLines = str2double(source.String);
@@ -1724,5 +1508,5 @@ function choice = choosedialog(choice)
         delete(gcf);
         choice.Load = 1;
     end
-
+        
 end

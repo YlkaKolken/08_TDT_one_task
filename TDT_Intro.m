@@ -28,22 +28,22 @@ Dates = ['18/09/2016';'07/07/2016';'03/04/2016'];
 % Default values for the GUI screen:
 
 % Keyboard keys for response:
-choice.TRKeys = ''; % 'T' for fixation and row for alignment.
-choice.LCKeys = ''; % 'L' for fixation and column for alignment.
+choice.TRKeys = 'RightArrow'; % 'T' for fixation and row for alignment.
+choice.LCKeys = 'LeftArrow'; % 'L' for fixation and column for alignment.
 
 choice.Device = 'Mouse'; % Responce device, could be either 'Mouse' or 'Keyboard'.
-choice.DeviceNumber = 1;
+choice.DeviceNumber = 2;
 choice.Screen = 'TMS Room'; % Screen used, could be either 'TMS Room', 'TDT Room' or 'Old HP'.
 choice.ScreenNumber = 1;
 % Number of columns and rows of lines in the backround of the stimuli:
 choice.VerticalLines = 19;
 choice.HorizontalLines = 19;
 
-choice.RelativeSize = 0.93; % Relative size of the screen on which the stimuli are presented.
+choice.RelativeSize = 0.6; % Relative size of the screen on which the stimuli are presented.
 % Screen width and hight in pixels and refresh rate in Hz:
-choice.ScreenWidth = 1152;
-choice.ScreenHeight = 864;
-choice.RefreshRate = 100;
+choice.ScreenWidth = 1920;
+choice.ScreenHeight = 1080;
+choice.RefreshRate = 60;
 
 choice.Orientation = '-'; % The orientation of the backround lines in the target stimuli, could be either '-' or '|'.
 choice.OrientationNumber = 1;

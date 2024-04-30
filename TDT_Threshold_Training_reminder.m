@@ -31,13 +31,14 @@ choice.Sleep = '1'; % Hours of sleep.
 choice.Age = '1'; % The age of the subject.
 choice.Gender = 'Female'; % Gender of the subject.
 choice.GenderNumber = 1;
-choice.nTrials = 2; % Number of trials for each SOA.
-choice.nBlocks = 9; % Number of blocks in the session.
+choice.nTrials = 5; % Number of trials for each SOA.
+choice.nBlocks = 1; % Number of blocks in the session.
 choice.TargetTime = 17; % Target display time in milliseconds. 
 
 % Keyboard keys for response:
 choice.TRKeys = 't'; % 'T' for fixation and row for alignment.
 choice.LCKeys = 'l'; % 'L' for fixation and column for alignment.
+choice.SOA = 340; % SOA time in milliseconds.
 
 choice.Device = 'Keyboard'; % Responce device, could be either 'Mouse' or 'Keyboard'.
 choice.DeviceNumber = 2;
@@ -149,6 +150,11 @@ while 1
         uiwait(h);
         continue
     end
+    if isempty(num2str(choice.SOA)) || isnan(str2double(num2str(choice.SOA)))
+        h = warndlg('SOA time (in milliseconds) must be a number!');
+        uiwait(h);
+        continue
+    end
     if isempty(num2str(choice.nBlocks)) || isnan(str2double(num2str(choice.nBlocks)))
         h = warndlg('Number of blocks must be a number!');
         uiwait(h);
@@ -156,6 +162,11 @@ while 1
     end
     if isempty(num2str(choice.TargetTime)) || isnan(str2double(num2str(choice.TargetTime)))
         h = warndlg('Target time (in milliseconds) must be a number!');
+        uiwait(h);
+        continue
+    end
+    if choice.TargetTime>choice.SOA
+        h = warndlg('Target time must be less than SOA time!');
         uiwait(h);
         continue
     end
@@ -332,14 +343,16 @@ Parameters(Session).SampleRate = 44100; % Sound sample rate. Default is 44100;
 
 % Timing parameters:
 % Parameters from GUI:
+Times(Session).SOAs = repmat(str2double(num2str(choice.SOA)), 1, choice.nTrials);
 Times(Session).Target = str2double(num2str(choice.TargetTime))/1000; % Target display time.
+%Times(Session).InnerTime = Times(Session).SOAs-Times(Session).Target;
 % Parameters not from GUI:
 Times(Session).FirstFixation = 3; % Time of pre-experiment (dummy) cross-fixation block in seconds. Default is 3.
 Times(Session).FinalFixation = 3; % Time of post-experiment (rest) cross-fixation block in seconds. Default is 3.
 Times(Session).FixationBlockBlank = 1; % Time of blank screen within each cross-fixation block in seconds (at the end of the block). Default is 1.
 Times(Session).Blank = 0.300; % Time of blank screen within each trial in seconds. Default is 0.300.
 Times(Session).Mask = 0.100; % Time of mask screen within each trial in seconds. Default is 0.100.
-Times(Session).SOAs = repmat([340 300 260 240 220 200 180 160 140 120 100 80 60 40],1,choice.nTrials); % SOA (Stimulus-to-mask Onset Asynchrony) times which will be used in each block.
+%Times(Session).SOAs = repmat([340 300 260 240 220 200 180 160 140 120 100 80 60 40],1,choice.nTrials); % SOA (Stimulus-to-mask Onset Asynchrony) times which will be used in each block.
 
 %% Set up the experiment. DO NOT change this section!
 
@@ -722,9 +735,11 @@ while b < choice.nBlocks+1
         Screen(window1, 'FillRect', Parameters(Session).BackgroundColor);
         flipTime = Screen('Flip', window1, flipTime + Times(Session).Target - Times(Session).slack);
 
+
         % Display the mask screen:
         Screen('DrawTexture', window1, imageDisplay(t,2));
         flipTime = Screen('Flip', window1, flipTime + Output(Session).SOAs(b,t)/1000 - Times(Session).Target - Times(Session).slack);
+
 
         if eye_tracking
             vpx_SendCommandString(['dataFile_insertmarker M']);
@@ -1323,22 +1338,22 @@ function choice = choosedialog(choice)
               'Value',choice.GenderNumber,...
               'String',{'Female';'Male'},...
               'Callback',@getGender);
-    
-    % Subject's age:
+
+    % SOA time:
     uicontrol('Parent',d,...
               'Style','text',...
               'Units','normalized',...
               'fontsize',FontSize,...
               'Position',[0.05 0.2 0.25 0.03],...
-              'String','Age:');
+              'String','SOA (ms):');
           
     uicontrol('Parent',d,...
               'Style','edit',...
               'Units','normalized',...
               'fontsize',FontSize,...
               'Position',[0.05 0.15 0.25 0.05],...
-              'String',choice.Age,...
-              'Callback',@getAge);
+              'String',choice.SOA,...
+              'Callback',@getSOA);
     
     % Number of trials:
     uicontrol('Parent',d,...
@@ -1663,6 +1678,9 @@ function choice = choosedialog(choice)
     function getDevice(source,~)
         choice.Device = char(source.String(source.Value,:));
         choice.DeviceNumber = source.Value;
+    end
+    function getSOA(source,~)
+        choice.SOA = str2double(source.String);
     end
     function getGender(source,~)
         choice.Gender = char(source.String(source.Value,:));
