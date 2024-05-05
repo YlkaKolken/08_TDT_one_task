@@ -483,9 +483,9 @@ Output(Session).Displays = 84*ones(2,choice.nTrials,Output(Session).Tries);
 Output(Session).Displays(2,:,:) = 45;
 % Prepare the Output matrices with default values which will change
 % according to the subject's responses:
-Output(Session).Responses = char(84*ones(2,choice.nTrials,Output(Session).Tries));
+Output(Session).Responses = char(45*ones(1,choice.nTrials,Output(Session).Tries));
 Output(Session).Responses(2,:,:) = '-';
-Output(Session).ResponseTimes = zeros(2,choice.nTrials,Output(Session).Tries);
+Output(Session).ResponseTimes = zeros(1,choice.nTrials,Output(Session).Tries);
 
 % A parameter indicating whether the subject finished the training or the
 % training was stopped by the experimenter:
@@ -716,22 +716,23 @@ while Output(Session).Tries<=choice.MaxTries && ~stop
             % keys for response, and recording the timings of the presses:
             i = 1;
             KbQueueFlush([],2);
-            while i<3
+            while i<2
                 [event, ~] = PsychHID('KbQueueGetEvent');
                 if ~isempty(event) && ~event.Pressed && ismember(event.Keycode,[Parameters(Session).L_Ver,Parameters(Session).T_Hor])
                     if ismember(event.Keycode,Parameters(Session).L_Ver)
-                        if i==1
-                            Output(Session).Responses(i,t,Output(Session).Tries) ='L';
-                        else
-                            Output(Session).Responses(i,t,Output(Session).Tries) ='|';
-                        end
+                    %     if i==1
+                    %         Output(Session).Responses(i,t,Output(Session).Tries) ='L';
+                    %     else
+                    %         Output(Session).Responses(i,t,Output(Session).Tries) ='|';
+                    %     end
+                        Output(Session).Responses(i,t,Output(Session).Tries) ='|';
                     end
-                    if i==1 && (Output(Session).Responses(1,t,Output(Session).Tries)~=Output(Session).Displays(1,t,Output(Session).Tries))
-                        % Playing the error sound for a wrong fixation response:
-                        PsychPortAudio('Stop', pahandle);
-                        PsychPortAudio('UseSchedule', pahandle, 3);
-                        PsychPortAudio('Start', pahandle);
-                    end
+                    % if i==1 && (Output(Session).Responses(1,t,Output(Session).Tries)~=Output(Session).Displays(1,t,Output(Session).Tries))
+                    %     % Playing the error sound for a wrong fixation response:
+                    %     PsychPortAudio('Stop', pahandle);
+                    %     PsychPortAudio('UseSchedule', pahandle, 3);
+                    %     PsychPortAudio('Start', pahandle);
+                    % end
                     Output(Session).ResponseTimes(i,t,Output(Session).Tries) = event.Time - flipTime;
                     i = i+1;
                 end
@@ -757,27 +758,27 @@ while Output(Session).Tries<=choice.MaxTries && ~stop
     Output(Session).Responses = char(Output(Session).Responses);
     
     % Calculate the percents of correct responses for the try:
-    Output(Session).FixationSuccessPercentage(Output(Session).Tries) = sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(1,:,Output(Session).Tries)))*(100/choice.nTrials);
-    Output(Session).AlignmentSuccessPercentage(Output(Session).Tries) = sum(Output(Session).Responses(2,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))*(100/choice.nTrials);
+    % Output(Session).FixationSuccessPercentage(Output(Session).Tries) = sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(1,:,Output(Session).Tries)))*(100/choice.nTrials);
+    Output(Session).AlignmentSuccessPercentage(Output(Session).Tries) = sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))*(100/choice.nTrials);
     % Check if results are good enough according to requirements:
-    if Output(Session).Tries<choice.MaxTries && ((Output(Session).FixationSuccessPercentage(Output(Session).Tries) < choice.FixationSuccess) || (Output(Session).AlignmentSuccessPercentage(Output(Session).Tries) < choice.AlignmentSuccess))
+    if Output(Session).Tries<choice.MaxTries && (Output(Session).AlignmentSuccessPercentage(Output(Session).Tries) < choice.AlignmentSuccess)
         % Results are not good enough, continue:
         if choice.DeviceNumber==1
-            text = ['Press the mouse to continue (',num2str(sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(1,:,Output(Session).Tries)))),...
-                     num2str(sum(Output(Session).Responses(2,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))),')'];
+            text = ['Press the mouse to continue (',...
+                    num2str(sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))),')'];
         else
-            text = ['Press the space bar to continue (',num2str(sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(1,:,Output(Session).Tries)))),...
-                     num2str(sum(Output(Session).Responses(2,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))),')'];
+            text = ['Press the space bar to continue (',...
+                    num2str(sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))),')'];
         end
-    elseif Output(Session).Tries<choice.MaxTries || ((Output(Session).FixationSuccessPercentage(Output(Session).Tries) >= choice.FixationSuccess) && (Output(Session).AlignmentSuccessPercentage(Output(Session).Tries) >= choice.AlignmentSuccess))
+    elseif Output(Session).Tries<choice.MaxTries || (Output(Session).AlignmentSuccessPercentage(Output(Session).Tries) >= choice.AlignmentSuccess)
         % Results are good enough, finish tries:
-        text = ['Well done! please call the instructor (',num2str(sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(1,:,Output(Session).Tries)))),...
-                 num2str(sum(Output(Session).Responses(2,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))),')'];
+        text = ['Well done! please call the instructor (',...
+                num2str(sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))),')'];
         stop = 1;
     else
         % Maximum number of tries performed, finish training:
-        text = ['Training finished. please call the instructor (',num2str(sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(1,:,Output(Session).Tries)))),...
-                 num2str(sum(Output(Session).Responses(2,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))),')'];
+        text = ['Training finished. please call the instructor (',...
+                num2str(sum(Output(Session).Responses(1,:,Output(Session).Tries) == char(Output(Session).Displays(2,:,Output(Session).Tries)))),')'];
         stop = 1;
     end
     DrawFormattedText(window1,text, 'center', 'center', Parameters(Session).TextColor);
@@ -870,9 +871,9 @@ while Output(Session).Tries<=choice.MaxTries && ~stop
         Output(Session).Tries = Output(Session).Tries+1;
         Output(Session).Displays(1,:,Output(Session).Tries) = 84*ones(1,choice.nTrials);
         Output(Session).Displays(2,:,Output(Session).Tries) = 45*ones(1,choice.nTrials);
-        Output(Session).Responses(:,:,Output(Session).Tries) = char(84*ones(2,choice.nTrials));
-        Output(Session).Responses(2,:,Output(Session).Tries) = '-';
-        Output(Session).ResponseTimes(:,:,Output(Session).Tries) = zeros(2,choice.nTrials);
+        Output(Session).Responses = char(45*ones(1,choice.nTrials,Output(Session).Tries));
+        Output(Session).Responses(2,:,:) = '-';
+        Output(Session).ResponseTimes = zeros(1,choice.nTrials,Output(Session).Tries);
     end
     
     
