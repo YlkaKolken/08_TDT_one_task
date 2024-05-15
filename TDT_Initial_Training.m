@@ -1,5 +1,4 @@
 function TDT_Initial_Training
-
 %% TDT initial training.
 
 % This is the initial training session for the TDT experiment.
@@ -204,7 +203,7 @@ while 1
     if choice.DeviceNumber==2
         choice.TRKeys = num2str(choice.TRKeys);
         choice.LCKeys = num2str(choice.LCKeys);
-        if any(ismember(choice.LCKeys,choice.TRKeys))
+        if any(ismember(choice.LCKeys,choice.TRKeys)) && ~((upper(choice.LCKeys) == "LEFT" && upper(choice.TRKeys) == "RIGHT") || (upper(choice.LCKeys) == "RIGHT" && upper(choice.TRKeys) == "LEFT"))
             h = warndlg('All T/Row keys must be different than the L/Column keys!');
             uiwait(h);
             continue
@@ -718,23 +717,26 @@ while Output(Session).Tries<=choice.MaxTries && ~stop
             KbQueueFlush([],2);
             while i<2
                 [event, ~] = PsychHID('KbQueueGetEvent');
-                if ~isempty(event) && ~event.Pressed && ismember(event.Keycode,[Parameters(Session).L_Ver,Parameters(Session).T_Hor])
-                    if ismember(event.Keycode,Parameters(Session).L_Ver)
-                    %     if i==1
-                    %         Output(Session).Responses(i,t,Output(Session).Tries) ='L';
-                    %     else
-                    %         Output(Session).Responses(i,t,Output(Session).Tries) ='|';
-                    %     end
-                        Output(Session).Responses(i,t,Output(Session).Tries) ='|';
+                if ~isempty(event) && ~event.Pressed 
+                    keypressed = upper(KbName(event.Keycode));
+                    if ismember(keypressed,[Parameters(Session).L_Ver,Parameters(Session).T_Hor])
+                        if ismember(keypressed,Parameters(Session).L_Ver)
+                        %     if i==1
+                        %         Output(Session).Responses(i,t,Output(Session).Tries) ='L';
+                        %     else
+                        %         Output(Session).Responses(i,t,Output(Session).Tries) ='|';
+                        %     end
+                            Output(Session).Responses(i,t,Output(Session).Tries) ='|';
+                        end
+                        % if i==1 && (Output(Session).Responses(1,t,Output(Session).Tries)~=Output(Session).Displays(1,t,Output(Session).Tries))
+                        %     % Playing the error sound for a wrong fixation response:
+                        %     PsychPortAudio('Stop', pahandle);
+                        %     PsychPortAudio('UseSchedule', pahandle, 3);
+                        %     PsychPortAudio('Start', pahandle);
+                        % end
+                        Output(Session).ResponseTimes(i,t,Output(Session).Tries) = event.Time - flipTime;
+                        i = i+1;
                     end
-                    % if i==1 && (Output(Session).Responses(1,t,Output(Session).Tries)~=Output(Session).Displays(1,t,Output(Session).Tries))
-                    %     % Playing the error sound for a wrong fixation response:
-                    %     PsychPortAudio('Stop', pahandle);
-                    %     PsychPortAudio('UseSchedule', pahandle, 3);
-                    %     PsychPortAudio('Start', pahandle);
-                    % end
-                    Output(Session).ResponseTimes(i,t,Output(Session).Tries) = event.Time - flipTime;
-                    i = i+1;
                 end
             end
         end
